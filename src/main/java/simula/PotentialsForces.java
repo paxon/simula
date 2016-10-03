@@ -7,7 +7,7 @@ public class PotentialsForces {
     public static double potenLJ(double rSqrd) {
         double rTwo = 1/rSqrd;
         double rSix = rTwo*rTwo*rTwo;
-        return 4*(rSix*rSix-rSix);
+        return 4*rSix*(rSix-1);
     }
 
     public static double forceLJ(double rSqrd) {
