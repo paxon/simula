@@ -19,11 +19,10 @@ public class SparseEnsemble{
 
     private double[] size = new double[DIMENSIONS];
     private int partQty;
-    private double[][] state;
 
-    private double[][] pos;
-    private double[][] vel;
-    private double[][] acc;
+    private double[][] position;
+    private double[][] velocity;
+    private double[][] acceleration;
 
     private double potenEnergyTotal =0.0;
     private double virialTotal = 0.0;
@@ -39,15 +38,26 @@ public class SparseEnsemble{
         this.partQty = partQty;
     }
 
-    public boolean init () {
+    public boolean getParamsFromConsole()
+    {
+        double[] size = new double[DIMENSIONS];
+        int partQty = 0;
         Scanner sc = new Scanner(System.in);
         System.out.println("Please enter size of cell:");
-        for (int i=0; i<DIMENSIONS; i++) setSize(i,sc.nextDouble());
+        for (int i=0; i<DIMENSIONS; i++) size[i] = sc.nextDouble();
         sc.nextLine();
         System.out.println("Enter quantity of particles:");
-        setPartQty(sc.nextInt());
+        partQty = sc.nextInt();
         sc.nextLine();
-        state = new double[partQty][DIMENSIONS*3];
+        return init(size, partQty);
+    }
+
+    private boolean init (double[] size, int partQty) {
+        this.size = size;
+        this.partQty = partQty;
+        position = new double[partQty][DIMENSIONS];
+        velocity = new double[partQty][DIMENSIONS];
+        acceleration = new double[partQty][DIMENSIONS];
         return rectAlign(MINDISTANCE);
     }
 
@@ -77,9 +87,9 @@ public class SparseEnsemble{
                     if (!lattice[num])
                     {
                         lattice[num] = true;
-                        state[partNum][0] = (num % axisFlat[0]) * distance;
+                        position[partNum][0] = (num % axisFlat[0]) * distance;
                         for (int i=1; i<DIMENSIONS; i++){
-                        state[partNum][i] = ((num / axisFlat[i-1]) % axisFlat[i]) * distance;
+                        position[partNum][i] = ((num / axisFlat[i-1]) % axisFlat[i]) * distance;
                     }
                     undone = false;
                     }
@@ -105,7 +115,7 @@ public class SparseEnsemble{
             for (int i=0; i<partQty; i++)
             {
                 double vel = ThreadLocalRandom.current().nextDouble(minVelocity,maxVelocity);
-                state[i][j+DIMENSIONS] = vel;
+                velocity[i][j] = vel;
                 generalVelocity[j] += vel;
             }
 
@@ -113,22 +123,22 @@ public class SparseEnsemble{
 
             for (int i=0; i<partQty; i++)
             {
-                double vel = state[i][j+DIMENSIONS];
+                double vel = velocity[i][j];
                 vel -= generalVelocity[j];
-                state[i][j+DIMENSIONS] = vel;
+                velocity[i][j] = vel;
                 velocitySqrSum = vel*vel;
             }
         }
 
-        double meanParticleKinetEnergy = velocitySqrSum/(2*partQty);
-        double energyAdjCoef = Math.sqrt(initKinetEnergy/meanParticleKinetEnergy);
+        double meanParticleKineticEnergy = velocitySqrSum/(2*partQty);
+        double velocityAdjustment = Math.sqrt(initKinetEnergy/meanParticleKineticEnergy);
 
         for (int j=0; j<DIMENSIONS; j++)
         {
             for (int i=0; i<partQty; i++)
             {
-                state[i][j+DIMENSIONS] *= energyAdjCoef;
-                state[i][j+DIMENSIONS*2] = 0.0;
+                velocity[i][j] *= velocityAdjustment;
+                acceleration[i][j] = 0.0;
             }
         }
     }
@@ -138,7 +148,7 @@ public class SparseEnsemble{
         {
             System.out.print("Prtcl #"+(i+1)+": ");
             for (int j=0; j<DIMENSIONS; j++){
-                System.out.print("x" + (j+1) + ": " + state[i][j] + " ");
+                System.out.print("x" + (j+1) + ": " + position[i][j] + " ");
             }
             System.out.println();
         }
@@ -154,16 +164,17 @@ public class SparseEnsemble{
 
     private void step()
     {
+
         for (int partNum=0; partNum<partQty; partNum++)
         {
             for (int dim=0; dim<DIMENSIONS; dim++)
             {
-                state[partNum][dim] = state[partNum][DIMENSIONS+dim]* dtSqrdByTwo;
-                state[partNum][DIMENSIONS+dim] =  state[partNum][DIMENSIONS*2+dim]* dtByTwo;
+                position[partNum][dim] = velocity[partNum][dim] * dtSqrdByTwo;
+                velocity[partNum][dim] = acceleration[partNum][dim] * dtByTwo;
 
                 calc();
 
-                state[partNum][DIMENSIONS+dim] =  state[partNum][DIMENSIONS*2+dim]* dtByTwo;
+                velocity[partNum][dim] = acceleration[partNum][dim] * dtByTwo;
             }
         }
         steps++;
@@ -191,15 +202,15 @@ public class SparseEnsemble{
             {
                 for (int dim = 0; dim<DIMENSIONS; dim++)
                 {
-                    vector[dim] = periodicDistanceAdjust(state[partOne][dim]-state[partTwo][dim], size[dim]);
+                    vector[dim] = periodicDistanceAdjust(position[partOne][dim]-position[partTwo][dim], size[dim]);
                 }
                 double sqrdDistance = getSqrdDistance(vector);
                 double force = PotentialsForces.forceLJ(sqrdDistance);
                 for (int dim = 0; dim<DIMENSIONS; dim++)
                 {
                     forceVector[dim] = force*vector[dim];
-                    state[partOne][dim+DIMENSIONS*2] += forceVector[dim];
-                    state[partTwo][dim+DIMENSIONS*2] -= forceVector[dim];
+                    acceleration[partOne][dim] += forceVector[dim];
+                    acceleration[partTwo][dim] -= forceVector[dim];
                     virialTotal += vector[dim]*forceVector[dim];
                 }
                 potenEnergyTotal += PotentialsForces.potenLJ(sqrdDistance);
@@ -220,12 +231,17 @@ public class SparseEnsemble{
         return res;
     }
 
-    public double periodicDistanceAdjust(double distance, double axisPeriod)
+    private double periodicPositionAdjust(double distance, double axisPeriod)
+    {
+        if (distance > axisPeriod) distance -= axisPeriod;
+        else if (distance < 0) distance += axisPeriod;
+        return distance;
+    }
+
+    private double periodicDistanceAdjust(double distance, double axisPeriod)
     {
         if (distance > axisPeriod/2.0) distance -= axisPeriod;
         else if (distance < -axisPeriod/2.0) distance += axisPeriod;
         return distance;
     }
-
-
 }

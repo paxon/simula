@@ -13,7 +13,7 @@ public class Simula {
         //System.out.println(b.getPotEnergy());
 
         SparseEnsemble spe = new SparseEnsemble();
-        spe.init();
+        spe.getParamsFromConsole();
         spe.start();
 
 
