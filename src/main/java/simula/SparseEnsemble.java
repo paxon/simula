@@ -11,6 +11,7 @@ public class SparseEnsemble{
     private final double MINDISTANCE = 1.05;
     private final double CALCDISTANCE = 2;
     private final double TIMESTEP = 0.01;
+    private final double INITPE = 0.000001;
 
     private final double dt = TIMESTEP;
     private final double dtByTwo = dt /2.0;
@@ -29,6 +30,7 @@ public class SparseEnsemble{
     private double kineticEnergySquaredAccumulator = 0.0;
     private int steps = 0;
 
+// gesture
 
     public boolean getParamsFromConsole()
     {
@@ -176,9 +178,9 @@ public class SparseEnsemble{
 
     public void start()
     {
-        initParticles(0.1,-0.5,0.5);
+        initParticles(INITPE,-0.5,0.5);
         calculateForces();
-        doSteps(1,5);
+        doSteps(100,100);
     }
 
     private void step()
@@ -188,8 +190,8 @@ public class SparseEnsemble{
         {
             for (int dim = 0; dim < DIMENSIONS; dim++)
             {
-                pos[partNum][dim] = periodicPositionShift(vel[partNum][dim]*dtSqrdByTwo, size[dim]);
-                vel[partNum][dim] = acc[partNum][dim] * dtByTwo;
+                pos[partNum][dim] += periodicPositionShift(vel[partNum][dim]*dt+acc[partNum][dim]*dtSqrdByTwo, size[dim]);
+                vel[partNum][dim] += acc[partNum][dim] * dtByTwo;
             }
         }
 
@@ -199,7 +201,7 @@ public class SparseEnsemble{
         {
             for (int dim=0; dim<DIMENSIONS; dim++)
             {
-                vel[partNum][dim] = acc[partNum][dim]* dtByTwo;
+                vel[partNum][dim] += acc[partNum][dim] * dtByTwo;
                 kineticEnergyTotal += getSquaredVectorLength(vel[partNum]);
             }
         }
@@ -208,16 +210,15 @@ public class SparseEnsemble{
         kineticEnergySquaredAccumulator += kineticEnergyTotal*kineticEnergyTotal;
 
         steps++;
+
+
     }
 
     private void doSteps(int stepsPerRun, int runsToDo)
     {
         for(int i=0; i<runsToDo; i++)
         {
-            for (int j=0; j<stepsPerRun; j++)
-            {
-                step();
-            }
+            for (int j=0; j<stepsPerRun; j++) { step();   }
             System.out.println(potentialEnergyAccumulator);
         }
     }
@@ -246,8 +247,7 @@ public class SparseEnsemble{
                 potentialEnergyAccumulator += PotentialsForces.potenLJ(sqrdDistance);
             }
         }
-        System.out.println(potentialEnergyAccumulator);
-        listParticlesState();
+        //listParticlesState();
     }
 
     public double getSquaredDistance(double[] vector)
@@ -272,17 +272,17 @@ public class SparseEnsemble{
         return res;
     }
 
-    public double periodicPositionShift(double position, double axisPeriod)
+    public double periodicPositionShift(double position, double period)
     {
-        if (position > 0) while (position>axisPeriod) position -= axisPeriod;
-        else while (position<0) position += axisPeriod;
+        if (position > 0) while (position>period) position -= period;
+        else while (position<0) position += period;
         return position;
     }
 
-    public double periodicDistanceShift(double distance, double axisPeriod)
+    public double periodicDistanceShift(double distance, double period)
     {
-        if (distance > 0) while (distance > axisPeriod/2.0) distance -= axisPeriod;
-        else while (distance < -axisPeriod/2.0) distance += axisPeriod;
+        if (distance > 0) while (distance > period/2.0) distance -= period;
+        else while (distance < -period/2.0) distance += period;
         return distance;
     }
 

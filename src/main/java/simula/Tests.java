@@ -1,5 +1,5 @@
 package simula;
-
+//gesture
 /**
  * Created by HP on 04.10.2016.
  */
