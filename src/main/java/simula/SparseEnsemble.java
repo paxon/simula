@@ -1,6 +1,5 @@
 package simula;
 
-import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -20,46 +19,46 @@ public class SparseEnsemble{
     private double[] size = new double[DIMENSIONS];
     private int partQty;
 
-    private double[][] position;
-    private double[][] velocity;
-    private double[][] acceleration;
+    private double[][] pos;
+    private double[][] vel;
+    private double[][] acc;
 
-    private double potenEnergyTotal =0.0;
+    private double potentialEnergyAccumulator = 0.0;
     private double virialTotal = 0.0;
+    private double kineticEnergyAccumulator = 0.0;
+    private double kineticEnergySquaredAccumulator = 0.0;
     private int steps = 0;
 
-    private void setSize(int xi, double size)
-    {
-        this.size[xi] = size;
-    }
-
-    private void setPartQty (int partQty)
-    {
-        this.partQty = partQty;
-    }
 
     public boolean getParamsFromConsole()
     {
         double[] size = new double[DIMENSIONS];
         int partQty = 0;
+
         Scanner sc = new Scanner(System.in);
         System.out.println("Please enter size of cell:");
-        for (int i=0; i<DIMENSIONS; i++) size[i] = sc.nextDouble();
+        for (int i=0; i<size.length; i++) size[i] = sc.nextDouble();
         sc.nextLine();
+
         System.out.println("Enter quantity of particles:");
         partQty = sc.nextInt();
         sc.nextLine();
+
         return init(size, partQty);
     }
 
-    private boolean init (double[] size, int partQty) {
+    private boolean init (double[] size, int partQty)
+    {
         this.size = size;
         this.partQty = partQty;
-        position = new double[partQty][DIMENSIONS];
-        velocity = new double[partQty][DIMENSIONS];
-        acceleration = new double[partQty][DIMENSIONS];
+
+        pos = new double[partQty][DIMENSIONS];
+        vel = new double[partQty][DIMENSIONS];
+        acc = new double[partQty][DIMENSIONS];
+
         return rectAlign(MINDISTANCE);
     }
+
 
     private boolean rectAlign (double distance)
     {
@@ -67,29 +66,28 @@ public class SparseEnsemble{
          * Checks whether there is enough space to lay particles upon rectangular lattice. Aligns particles spaced by
          * var distance. If there is not enough particles to fill the mesh some nodes are skipped in random order.
          */
-        int[] axisFlat = new int[DIMENSIONS];
+        int[] nodesPerAxis = new int[DIMENSIONS];
         int latticeCapacity = 1;
         for (int i=0; i<DIMENSIONS; i++) {
             int intervals = (int) (size[i] / distance);
-            axisFlat[i] = intervals;
+            nodesPerAxis[i] = intervals;
             latticeCapacity *= intervals;
         }
 
         if (latticeCapacity>=partQty) {
-            Random nodeRand = new Random();
             boolean[] lattice = new boolean[latticeCapacity];
             for (int partNum = 0; partNum<partQty; partNum++)
             {
                 int num;
                 boolean undone = true;
                 while (undone) {
-                    num = nodeRand.nextInt(latticeCapacity);
+                    num = ThreadLocalRandom.current().nextInt(latticeCapacity);
                     if (!lattice[num])
                     {
                         lattice[num] = true;
-                        position[partNum][0] = (num % axisFlat[0]) * distance;
+                        pos[partNum][0] = ( (num+1) % nodesPerAxis[0]) * distance;
                         for (int i=1; i<DIMENSIONS; i++){
-                        position[partNum][i] = ((num / axisFlat[i-1]) % axisFlat[i]) * distance;
+                        pos[partNum][i] = (((num+1) / nodesPerAxis[i-1]) % nodesPerAxis[i]) * distance;
                     }
                     undone = false;
                     }
@@ -103,9 +101,9 @@ public class SparseEnsemble{
         }
     }
 
-
-
-    public void initParticles(double initKinetEnergy, double minVelocity, double maxVelocity) {
+    public void initParticles(double initKinetEnergy, double minVelocity, double maxVelocity)
+    {
+        double velocity = 0;
         double[] generalVelocity = new double[DIMENSIONS];
         double velocitySqrSum = 0.0;
         for (int j=0; j<DIMENSIONS; j++)
@@ -114,31 +112,31 @@ public class SparseEnsemble{
 
             for (int i=0; i<partQty; i++)
             {
-                double vel = ThreadLocalRandom.current().nextDouble(minVelocity,maxVelocity);
-                velocity[i][j] = vel;
-                generalVelocity[j] += vel;
+                velocity = ThreadLocalRandom.current().nextDouble(minVelocity,maxVelocity);
+                vel[i][j] = velocity;
+                generalVelocity[j] += velocity;
             }
 
             generalVelocity[j] /= partQty;
 
             for (int i=0; i<partQty; i++)
             {
-                double vel = velocity[i][j];
-                vel -= generalVelocity[j];
-                velocity[i][j] = vel;
-                velocitySqrSum = vel*vel;
+                velocity = vel[i][j];
+                velocity -= generalVelocity[j];
+                vel[i][j] = velocity;
+                velocitySqrSum += velocity*velocity;
             }
         }
 
-        double meanParticleKineticEnergy = velocitySqrSum/(2*partQty);
-        double velocityAdjustment = Math.sqrt(initKinetEnergy/meanParticleKineticEnergy);
+        double particialKineticEnergy = velocitySqrSum/(2*partQty);
+        double energyScalingRatio = Math.sqrt(initKinetEnergy/particialKineticEnergy);
 
         for (int j=0; j<DIMENSIONS; j++)
         {
             for (int i=0; i<partQty; i++)
             {
-                velocity[i][j] *= velocityAdjustment;
-                acceleration[i][j] = 0.0;
+                vel[i][j] *= energyScalingRatio;
+                acc[i][j] = 0.0;
             }
         }
     }
@@ -148,7 +146,7 @@ public class SparseEnsemble{
         {
             System.out.print("Prtcl #"+(i+1)+": ");
             for (int j=0; j<DIMENSIONS; j++){
-                System.out.print("x" + (j+1) + ": " + position[i][j] + " ");
+                System.out.print("x" + (j+1) + ": " + pos[i][j] + " ");
             }
             System.out.println();
         }
@@ -158,25 +156,36 @@ public class SparseEnsemble{
     public void start()
     {
         initParticles(0,-0.5,0.5);
-        calc();
-        doSteps(10,1);
+        calculateForces();
+        doSteps(1,10);
     }
 
     private void step()
     {
+        double kineticEnergyTotal = 0;
+        for (int partNum=0; partNum<partQty; partNum++)
+        {
+            for (int dim = 0; dim < DIMENSIONS; dim++)
+            {
+                pos[partNum][dim] = periodicPositionShift(vel[partNum][dim]*dtSqrdByTwo, size[dim]);
+                vel[partNum][dim] = acc[partNum][dim] * dtByTwo;
+            }
+        }
+
+        calculateForces();
 
         for (int partNum=0; partNum<partQty; partNum++)
         {
             for (int dim=0; dim<DIMENSIONS; dim++)
             {
-                position[partNum][dim] = velocity[partNum][dim] * dtSqrdByTwo;
-                velocity[partNum][dim] = acceleration[partNum][dim] * dtByTwo;
-
-                calc();
-
-                velocity[partNum][dim] = acceleration[partNum][dim] * dtByTwo;
+                vel[partNum][dim] = acc[partNum][dim]* dtByTwo;
+                kineticEnergyTotal += getSquaredVectorLength(vel[partNum]);
             }
         }
+        kineticEnergyTotal /= 2.0;
+        kineticEnergyAccumulator += kineticEnergyTotal;
+        kineticEnergySquaredAccumulator += kineticEnergyTotal*kineticEnergyTotal;
+
         steps++;
     }
 
@@ -188,60 +197,72 @@ public class SparseEnsemble{
             {
                 step();
             }
-            System.out.println(potenEnergyTotal);
+            System.out.println(potentialEnergyAccumulator);
         }
     }
 
-    public void calc()
+    public void calculateForces()
     {
-        double[] vector = new double[DIMENSIONS];
+        double[] distance = new double[DIMENSIONS];
         double[] forceVector = new double[DIMENSIONS];
-        for (int partOne=0; partOne<partQty-1; partOne++)
+        for (int p1=0; p1<partQty-1; p1++)
         {
-            for (int partTwo=partOne+1; partTwo<partQty; partTwo++)
+            for (int p2=p1+1; p2<partQty; p2++)
             {
                 for (int dim = 0; dim<DIMENSIONS; dim++)
                 {
-                    vector[dim] = periodicDistanceAdjust(position[partOne][dim]-position[partTwo][dim], size[dim]);
+                    distance[dim] = periodicDistanceShift(pos[p1][dim]-pos[p2][dim], size[dim]);
                 }
-                double sqrdDistance = getSqrdDistance(vector);
+                double sqrdDistance = getSquaredDistance(distance);
                 double force = PotentialsForces.forceLJ(sqrdDistance);
                 for (int dim = 0; dim<DIMENSIONS; dim++)
                 {
-                    forceVector[dim] = force*vector[dim];
-                    acceleration[partOne][dim] += forceVector[dim];
-                    acceleration[partTwo][dim] -= forceVector[dim];
-                    virialTotal += vector[dim]*forceVector[dim];
+                    forceVector[dim] = force*distance[dim];
+                    acc[p1][dim] += forceVector[dim];
+                    acc[p2][dim] -= forceVector[dim];
+                    virialTotal += distance[dim]*forceVector[dim];
                 }
-                potenEnergyTotal += PotentialsForces.potenLJ(sqrdDistance);
-
+                potentialEnergyAccumulator += PotentialsForces.potenLJ(sqrdDistance);
             }
         }
-        System.out.println(potenEnergyTotal);
+        System.out.println(potentialEnergyAccumulator);
     }
 
-    public double getSqrdDistance(double[] vector)
+    public double getSquaredDistance(double[] vector)
     {
         double res = 0;
-        for (int dim=0; dim<vector.length; dim++)
+        for (int dim=0; dim<DIMENSIONS; dim++)
         {
-            double distance = periodicDistanceAdjust(vector[dim], size[dim]);
+            double distance = periodicDistanceShift(vector[dim], size[dim]);
             res += distance*distance;
         }
         return res;
     }
 
-    private double periodicPositionAdjust(double distance, double axisPeriod)
+    private double getSquaredVectorLength(double[] vector)
     {
-        if (distance > axisPeriod) distance -= axisPeriod;
-        else if (distance < 0) distance += axisPeriod;
+        double res = 0;
+        for (int dim=0; dim<DIMENSIONS; dim++)
+        {
+            double distance = vector[dim];
+            res += distance*distance;
+        }
+        return res;
+    }
+
+    public double periodicPositionShift(double position, double axisPeriod)
+    {
+        if (position > 0) while (position>axisPeriod) position -= axisPeriod;
+        else while (position<0) position += axisPeriod;
+        return position;
+    }
+
+    public double periodicDistanceShift(double distance, double axisPeriod)
+    {
+        if (distance > 0) while (distance > axisPeriod/2.0) distance -= axisPeriod;
+        else while (distance < -axisPeriod/2.0) distance += axisPeriod;
         return distance;
     }
 
-    private double periodicDistanceAdjust(double distance, double axisPeriod)
-    {
-        if (distance > axisPeriod/2.0) distance -= axisPeriod;
-        else if (distance < -axisPeriod/2.0) distance += axisPeriod;
-        return distance;
-    }
+
 }

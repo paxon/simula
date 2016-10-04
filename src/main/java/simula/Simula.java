@@ -10,14 +10,13 @@ public class Simula {
         //b.initSize();
         //b.initPar(BigInteger.valueOf(100));
         //b.listPar();
-        //System.out.println(b.getPotEnergy());
+        //Sy4stem.out.println(b.getPotEnergy());
 
         SparseEnsemble spe = new SparseEnsemble();
-        spe.getParamsFromConsole();
-        spe.start();
-
-
-
+        if (spe.getParamsFromConsole()) {
+            spe.listParticlesCoord();
+            spe.start();
+        }
     }
 
 
