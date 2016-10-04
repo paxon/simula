@@ -14,7 +14,7 @@ public class Simula {
 
         SparseEnsemble spe = new SparseEnsemble();
         if (spe.getParamsFromConsole()) {
-            spe.listParticlesCoord();
+            //spe.listParticlesState();
             spe.start();
         }
     }

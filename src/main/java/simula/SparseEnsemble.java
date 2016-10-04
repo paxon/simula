@@ -67,6 +67,7 @@ public class SparseEnsemble{
          * var distance. If there is not enough particles to fill the mesh some nodes are skipped in random order.
          */
         int[] nodesPerAxis = new int[DIMENSIONS];
+        int[] posTuple = new int[nodesPerAxis.length];
         int latticeCapacity = 1;
         for (int i=0; i<DIMENSIONS; i++) {
             int intervals = (int) (size[i] / distance);
@@ -85,9 +86,9 @@ public class SparseEnsemble{
                     if (!lattice[num])
                     {
                         lattice[num] = true;
-                        pos[partNum][0] = ( (num+1) % nodesPerAxis[0]) * distance;
-                        for (int i=1; i<DIMENSIONS; i++){
-                        pos[partNum][i] = (((num+1) / nodesPerAxis[i-1]) % nodesPerAxis[i]) * distance;
+                        posTuple = getTupleFromIndex(num,posTuple,nodesPerAxis);
+                        for (int i=0; i<DIMENSIONS; i++){
+                        pos[partNum][i] = posTuple[i] * distance;
                     }
                     undone = false;
                     }
@@ -101,9 +102,28 @@ public class SparseEnsemble{
         }
     }
 
+    private int[] getTupleFromIndex(int index, int[] tuple, int[] tupleSize)
+    {
+        if (tupleSize.length>0 && (tuple.length >= tupleSize.length))
+        {
+            tuple[0] = index % tupleSize[0];
+
+            if (tupleSize.length>1) {
+                int m = tupleSize[0];
+                for (int i=1; i<tupleSize.length-1; i++)
+                {
+                    tuple[i] = (index / m) % tupleSize[i];
+                    m *= tupleSize[i];
+                }
+                tuple[tupleSize.length-1]= index / m;
+            }
+        }
+        return tuple;
+    }
+
     public void initParticles(double initKinetEnergy, double minVelocity, double maxVelocity)
     {
-        double velocity = 0;
+        double velocity;
         double[] generalVelocity = new double[DIMENSIONS];
         double velocitySqrSum = 0.0;
         for (int j=0; j<DIMENSIONS; j++)
@@ -129,6 +149,7 @@ public class SparseEnsemble{
         }
 
         double particialKineticEnergy = velocitySqrSum/(2*partQty);
+
         double energyScalingRatio = Math.sqrt(initKinetEnergy/particialKineticEnergy);
 
         for (int j=0; j<DIMENSIONS; j++)
@@ -141,12 +162,12 @@ public class SparseEnsemble{
         }
     }
 
-    public void listParticlesCoord(){
+    public void listParticlesState(){
         for(int i=0; i<partQty; i++)
         {
             System.out.print("Prtcl #"+(i+1)+": ");
             for (int j=0; j<DIMENSIONS; j++){
-                System.out.print("x" + (j+1) + ": " + pos[i][j] + " ");
+                System.out.print("x" + (j+1) + ": " + pos[i][j] + " v" + (j+1) + ": " + vel[i][j] + " a" + (j+1) + ": " + acc[i][j] + " ");
             }
             System.out.println();
         }
@@ -155,9 +176,9 @@ public class SparseEnsemble{
 
     public void start()
     {
-        initParticles(0,-0.5,0.5);
+        initParticles(0.1,-0.5,0.5);
         calculateForces();
-        doSteps(1,10);
+        doSteps(1,5);
     }
 
     private void step()
@@ -226,6 +247,7 @@ public class SparseEnsemble{
             }
         }
         System.out.println(potentialEnergyAccumulator);
+        listParticlesState();
     }
 
     public double getSquaredDistance(double[] vector)
