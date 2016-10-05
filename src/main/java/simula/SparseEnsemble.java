@@ -104,7 +104,7 @@ public class SparseEnsemble{
         }
     }
 
-    private int[] getTupleFromIndex(int index, int[] tuple, int[] tupleSize)
+    public static int[] getTupleFromIndex(int index, int[] tuple, int[] tupleSize)
     {
         if (tupleSize.length>0 && (tuple.length >= tupleSize.length))
         {
@@ -121,6 +121,29 @@ public class SparseEnsemble{
             }
         }
         return tuple;
+    }
+
+    public static int[] getTupleFromIndex(int index, int[] tupleSize)
+    {
+        if (tupleSize.length>0)
+        {
+            int[] tuple = new int[tupleSize.length];
+            tuple[0] = index % tupleSize[0];
+
+            if (tupleSize.length>1) {
+                int m = tupleSize[0];
+                for (int i=1; i<tupleSize.length-1; i++)
+                {
+                    tuple[i] = (index / m) % tupleSize[i];
+                    m *= tupleSize[i];
+                }
+                tuple[tupleSize.length-1]= index / m;
+            }
+            return tuple;
+        } else {
+            int[] nulltuple = {};
+            return nulltuple;
+        }
     }
 
     public void initParticles(double initKinetEnergy, double minVelocity, double maxVelocity)

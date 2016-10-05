@@ -16,10 +16,14 @@ public class Simula {
         SparseEnsemble spe = new SparseEnsemble();
         System.out.println(PotentialsForces.forceLJ(1));
         System.out.println(PotentialsForces.potenLJ(1));
+
+        Tests.indexTuplerCompare(12,24,1000000);
+        /*
         if (spe.getParamsFromConsole()) {
             //spe.listParticlesState();
             spe.start();
         }
+        */
     }
 
 
