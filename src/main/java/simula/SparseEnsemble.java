@@ -180,7 +180,7 @@ public class SparseEnsemble{
     {
         initParticles(INITPE,-0.5,0.5);
         calculateForces();
-        doSteps(100,100);
+        doSteps(5,10);
     }
 
     private void step()
@@ -249,6 +249,14 @@ public class SparseEnsemble{
         }
         //listParticlesState();
     }
+
+    public double getMeanTemperature() {
+        return kineticEnergyAccumulator/(partQty*steps);
+    }
+
+
+
+
 
     public double getSquaredDistance(double[] vector)
     {
