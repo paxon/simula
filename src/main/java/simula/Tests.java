@@ -90,18 +90,16 @@ public class Tests {
         int[] tuple = new int[tupleSize.length];
         int bound = 300;
 
-
         for (int h=0; h<4; h++) {
             System.out.println(tuplings[h].tellName());
             for (int i=0; i<warmupRuns+regularRuns; i++)
             {
-                if (i<warmupRuns) System.out.print("Warm-up run #" + i);
-                else System.out.print("Regular run #");
+                if (i<warmupRuns) System.out.print("Warm-up run #" + (i + 1));
+                else System.out.print("Regular run #" + (i - warmupRuns + 1));
                 nanoT = System.nanoTime();
                 doTuple(h,cyclesPerCount,bound,tuple,tupleSize);
                 nanoT = System.nanoTime()-nanoT;
                 System.out.println(" - " + nanoT/cyclesPerCount + " ns per call");
-
             }
         }
     }

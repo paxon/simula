@@ -16,8 +16,9 @@ public class Simula {
         SparseEnsemble spe = new SparseEnsemble();
         System.out.println(PotentialsForces.forceLJ(1));
         System.out.println(PotentialsForces.potenLJ(1));
+        System.out.println(Runtime.getRuntime().availableProcessors());
 
-        Tests.indexTuplerCompare(12,24,1000000);
+        Tests.indexTuplerCompare(12,24,10000000);
         /*
         if (spe.getParamsFromConsole()) {
             //spe.listParticlesState();
