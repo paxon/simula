@@ -1,7 +1,9 @@
-package simula;
+package simula.misc;
 //gesture
 
-import com.sun.org.apache.xerces.internal.impl.xpath.regex.RegularExpression;
+import simula.routines.PotentialsForces;
+import static simula.routines.SpatialRoutines.*;
+
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -60,22 +62,22 @@ public class Tests {
 
     private static void indexTuplerUnreceivedSingleCreation(int cycles, int bound, int[] tuple, int[] tupleSize) {
         for (int i=0; i<cycles; i++)
-        SparseEnsemble.getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tuple,tupleSize);
+        getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tuple,tupleSize);
     }
 
     private static  void indexTuplerReceivedSingleCreation(int cycles, int bound, int[] tuple, int[] tupleSize) {
         for (int i=0; i<cycles; i++)
-            tuple = SparseEnsemble.getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tuple,tupleSize);
+            tuple = getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tuple,tupleSize);
     }
 
     private static void indexTuplerUnreceivedMultipleCreation(int cycles, int bound, int[] tupleSize) {
         for (int i=0; i<cycles; i++)
-            SparseEnsemble.getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tupleSize);
+            getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tupleSize);
     }
 
     private static void indexTuplerReceivedMultipleCreation(int cycles, int bound, int[] tuple, int[] tupleSize) {
         for (int i=0; i<cycles; i++)
-            tuple = SparseEnsemble.getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tupleSize);
+            tuple = getTupleFromIndex(ThreadLocalRandom.current().nextInt(bound),tupleSize);
     }
 
     public static void doTuple(int i, int cycles, int bound, int[] tuple, int[] tupleSize)
@@ -103,36 +105,4 @@ public class Tests {
             }
         }
     }
-
-  /*  public static void pairInteractionBenchmark(int warmupRuns, int regularRuns, int cyclesPerCount)
-    {
-        final int SIDE = 5;
-        long nanoT;
-        int membersQty = SIDE*SIDE*SIDE;
-        double[] members = new double[membersQty];
-        int[][] interactions = new int[(membersQty-1)*membersQty/2][(membersQty-1)*membersQty/2];
-
-        for (int i=0; i<membersQty; i++)
-        {
-            members[i] = ThreadLocalRandom.current().nextDouble(SIDE);
-        }
-        int k = 0;
-        for (int i=0; i<membersQty-1; i++) {
-            for (int j=i+1; j<membersQty; j++){
-                interactions[k]
-            }
-        }
-
-
-        for (int i=0; i<warmupRuns+regularRuns; i++)
-        {
-            if (i<warmupRuns) System.out.print("Warm-up run #" + (i + 1));
-            else System.out.print("Regular run #" + (i - warmupRuns + 1));
-            nanoT = System.nanoTime();
-            doTuple(h,cyclesPerCount,bound,tuple,tupleSize);
-            nanoT = System.nanoTime()-nanoT;
-            System.out.println(" - " + nanoT/cyclesPerCount + " ns per call");
-        }
-
-    }*/
 }
