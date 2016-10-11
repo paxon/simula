@@ -3,7 +3,6 @@
     <output-path>$PROJECT_DIR$/out/artifacts/simula_jar</output-path>
     <root id="archive" name="simula.jar">
       <element id="module-output" name="simula" />
-      <element id="library" level="application" name="org.opensourcephysics" />
     </root>
   </artifact>
 </component>

@@ -10,7 +10,7 @@ import static simula.routines.SpatialRoutines.*;
 /**
  * Created by sash on 30.09.16.
  */
-public class SparseEnsemble{
+public class SparseEnsembleQD {
 
     /**
      * Sparse Ensemble uses Lennard-Jones modelling potential to simulate a small system of interacting particles.
@@ -31,7 +31,7 @@ public class SparseEnsemble{
     private final double dtSqrdByTwo = dtByTwo * dt;
 
     private double[] size = new double[DIMENSIONS];
-    private int partQty;
+    private int partQty = 0;
 
     private double[][] pos;
     private double[][] vel;
@@ -49,9 +49,6 @@ public class SparseEnsemble{
 
     public boolean getParamsFromConsole()
     {
-        double[] size = new double[DIMENSIONS];
-        int partQty = 0;
-
         Scanner sc = new Scanner(System.in);
         System.out.println("Please enter size of cell:");
         for (int i=0; i<size.length; i++) size[i] = sc.nextDouble();
@@ -69,9 +66,9 @@ public class SparseEnsemble{
         this.size = size;
         this.partQty = partQty;
 
-        pos = new double[partQty][DIMENSIONS];
-        vel = new double[partQty][DIMENSIONS];
-        acc = new double[partQty][DIMENSIONS];
+        pos = new double[size.length][partQty];
+        vel = new double[size.length][partQty];
+        acc = new double[size.length][partQty];
 
         return rectAlign(MINDISTANCE, size, partQty);
     }
@@ -106,7 +103,7 @@ public class SparseEnsemble{
                         lattice[num] = true;
                         posTuple = getTupleFromIndex(num,posTuple,nodesPerAxis);
                         for (int i=0; i<pos[partNum].length; i++){
-                        pos[partNum][i] = posTuple[i] * distance;
+                        pos[i][partNum] = posTuple[i] * distance;
                     }
                     undone = false;
                     }
@@ -129,26 +126,26 @@ public class SparseEnsemble{
          * fit declared kinetic energy.
          */
         double velocity;
-        double[] generalVelocity = new double[DIMENSIONS];
+        double[] generalVelocity = new double[size.length];
         double velocitySqrSum = 0.0;
-        for (int j=0; j<DIMENSIONS; j++)
+        for (int dim=0; dim<size.length; dim++)
         {
-            generalVelocity[j] = 0.0;
+            generalVelocity[dim] = 0.0;
 
-            for (int i=0; i<partQty; i++)
+            for (int partNum=0; partNum<partQty; partNum++)
             {
                 velocity = ThreadLocalRandom.current().nextDouble(minVelocity,maxVelocity);
-                vel[i][j] = velocity;
-                generalVelocity[j] += velocity;
+                vel[dim][partNum] = velocity;
+                generalVelocity[dim] += velocity;
             }
 
-            generalVelocity[j] /= partQty;
+            generalVelocity[dim] /= partQty;
 
-            for (int i=0; i<partQty; i++)
+            for (int partNum=0; partNum<partQty; partNum++)
             {
-                velocity = vel[i][j];
-                velocity -= generalVelocity[j];
-                vel[i][j] = velocity;
+                velocity = vel[dim][partNum];
+                velocity -= generalVelocity[dim];
+                vel[dim][partNum] = velocity;
                 velocitySqrSum += velocity*velocity;
             }
         }
@@ -157,12 +154,12 @@ public class SparseEnsemble{
 
         double energyScalingRatio = Math.sqrt(initKinetEnergy/particialKineticEnergy);
 
-        for (int j=0; j<DIMENSIONS; j++)
+        for (int dim=0; dim<size.length; dim++)
         {
-            for (int i=0; i<partQty; i++)
+            for (int partNum=0; partNum<partQty; partNum++)
             {
-                vel[i][j] *= energyScalingRatio;
-                acc[i][j] = 0.0;
+                vel[dim][partNum] *= energyScalingRatio;
+                acc[dim][partNum] = 0.0;
             }
         }
     }
@@ -192,20 +189,18 @@ public class SparseEnsemble{
          * actual and previous acceleration.
          */
         double kineticEnergyTotal = 0;
-        for (int partNum=0; partNum<partQty; partNum++)
+        for (int dim = 0; dim < DIMENSIONS; dim++) for (int partNum=0; partNum<partQty; partNum++)
         {
-            for (int dim = 0; dim < DIMENSIONS; dim++)
-            {
-                pos[partNum][dim] = periodicPositionShift(pos[partNum][dim]+vel[partNum][dim]*dt+acc[partNum][dim]*dtSqrdByTwo, size[dim]);
-                vel[partNum][dim] += acc[partNum][dim] * dtByTwo;
-            }
+            pos[dim][partNum] = periodicPositionShift(pos[dim][partNum]+vel[dim][partNum]*dt+acc[dim][partNum]*dtSqrdByTwo, size[dim]);
+            vel[dim][partNum] += acc[dim][partNum] * dtByTwo;
         }
+
 
         calculateForces();
 
-        for (int partNum=0; partNum<partQty; partNum++) for (int dim=0; dim<DIMENSIONS; dim++)
+        for (int dim=0; dim<DIMENSIONS; dim++) for (int partNum=0; partNum<partQty; partNum++)
         {
-                vel[partNum][dim] += acc[partNum][dim] * dtByTwo;
+                vel[dim][partNum] += acc[dim][partNum] * dtByTwo;
                 kineticEnergyTotal += getSquaredVectorLength(vel[partNum]);
         }
 
@@ -232,8 +227,8 @@ public class SparseEnsemble{
 
     private void calculateForces()
     {
-        double[] distance = new double[DIMENSIONS];
-        double[] forceVector = new double[DIMENSIONS];
+        double[] distance = new double[size.length];
+        double[] forceVector = new double[size.length];
         for (int i=0; i<acc.length; i++) for (int j=0; j<acc[i].length; j++) acc[i][j] = 0.0;
         for (int p1=0; p1<partQty-1; p1++)
         {
@@ -241,15 +236,15 @@ public class SparseEnsemble{
             {
                 for (int dim = 0; dim<distance.length; dim++)
                 {
-                    distance[dim] = periodicDistanceShift(pos[p1][dim]-pos[p2][dim], size[dim]);
+                    distance[dim] = periodicDistanceShift(pos[dim][p1]-pos[dim][p2], size[dim]);
                 }
                 double sqrdDistance = getSquaredDistance(distance);
                 double force = PotentialsForces.forceLJ(sqrdDistance);
                 for (int dim = 0; dim<distance.length; dim++)
                 {
                     forceVector[dim] = force*distance[dim];
-                    acc[p1][dim] += forceVector[dim];
-                    acc[p2][dim] -= forceVector[dim];
+                    acc[dim][p1] += forceVector[dim];
+                    acc[dim][p2] -= forceVector[dim];
                     virialTotal += distance[dim]*forceVector[dim];
                 }
                 potentialEnergyAccumulator += PotentialsForces.potenLJ(sqrdDistance);
