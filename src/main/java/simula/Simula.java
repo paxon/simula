@@ -10,9 +10,8 @@ public class Simula {
 //gesture
 
     public static void main(String[] args) {
-        SparseEnsembleDQ spe = new SparseEnsembleDQ();
-        if (spe.getParamsFromConsole()) {
-            spe.start();
-        }
+        SparseEnsembleQD speqd = new SparseEnsembleQD();
+        Thread qd = new Thread(speqd);
+        if (speqd.getParamsFromConsole()) qd.start();
     }
 }
